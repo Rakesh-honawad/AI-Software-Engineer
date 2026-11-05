@@ -38,10 +38,16 @@ def _verified_installation(installation_id: int) -> dict:
             detail="This installation does not belong to the configured GitHub App.",
         )
 
-    if not installation.get("account_login"):
+    if not installation.get("account_login") or not installation.get("account_id"):
         raise HTTPException(
             status_code=502,
             detail="GitHub returned incomplete installation account information.",
+        )
+
+    if installation.get("account_type") not in ("User", "Organization"):
+        raise HTTPException(
+            status_code=502,
+            detail="GitHub returned an unsupported installation account type.",
         )
 
     return installation
@@ -174,12 +180,17 @@ def confirm_installation(
     installation = _verified_installation(installation_id)
 
     try:
-        store.save_installation(
-            user_id=user.id,
-            installation_id=installation_id,
-            account_login=installation["account_login"],
-            account_type=installation["account_type"],
-        )
+        save_kwargs = {
+            "user_id": user.id,
+            "installation_id": installation_id,
+            "account_login": installation["account_login"],
+            "account_type": installation["account_type"],
+        }
+
+        if installation.get("account_id") is not None:
+            save_kwargs["account_id"] = installation["account_id"]
+
+        store.save_installation(**save_kwargs)
         store.delete_pending_installation(user.id, request.state)
         store.audit_event(
             user.id,

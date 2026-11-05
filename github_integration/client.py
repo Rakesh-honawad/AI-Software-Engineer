@@ -104,8 +104,14 @@ def get_installation(installation_id: int) -> dict:
     )
 
     account = result.get("account") or {}
+    account_id = account.get("id")
+
+    if account_id is None:
+        raise RuntimeError("GitHub returned no account ID for this installation.")
+
     return {
         "id": int(result["id"]),
+        "account_id": str(account_id),
         "account_login": str(account.get("login") or ""),
         "account_type": str(account.get("type") or ""),
         "app_id": int(result.get("app_id") or 0),
