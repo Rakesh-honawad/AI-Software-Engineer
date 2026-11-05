@@ -1,0 +1,58 @@
+﻿# Environment and secrets
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.stubs/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Frontend
+workspace-ui/node_modules/
+workspace-ui/.next/
+workspace-ui/out/
+workspace-ui/.vercel/
+
+# Runtime data
+storage/**/*.db
+storage/**/*.sqlite
+storage/**/__pycache__/
+sandbox/**/__pycache__/
+
+# Build and generated files
+dist/
+build/
+coverage/
+*.log
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Deployment backups
+*.deploy-backup
+*.cors-backup
+
+# Generated TypeScript files
+*.tsbuildinfo
+
+# Private credentials
+secrets/
