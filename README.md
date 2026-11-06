@@ -41,26 +41,21 @@ AI Software Engineer (Engineer Mode) does not paste a whole repository into an L
 
 ## Product Screenshots
 
-<<<<<<< HEAD
-| View | Screenshot |
-=======
 | Feature | Screenshot |
->>>>>>> 2b66798 (readme_updated)
 |---|---|
-| **Connect Repository** — Connect a repository to the engineering workspace | ![Connect Repository](docs/images/connect_page.png) |
-| **Direct Repository Access** — Access the connected repository | ![Direct Repository Access](docs/images/direct_repo_access.png) |
-| **Dependency Graph** — Visualize repository files, nodes, and relationships | ![Graph View](docs/images/graph_view.png) |
-| **Structured Graph Visualization** — Explore nodes, edges, imports, and connections | ![Nodes and Edges](docs/images/Nodes_edges_view.png) ![Structured Graph](docs/images/strcured_graph_view.png) |
-| **Impact Analysis** — Identify dependencies and understand the potential impact of code changes | ![Impact Analysis](docs/images/impact_analyze.png) ![Impact Connections](docs/images/Impact_connection.png) |
-| **Node Exploration and Actions** — Select nodes, inspect details, and access contextual actions | ![Node Panel](docs/images/Node_panel.png) ![Node Click](docs/images/node_click.png) |
-| **AI Assistant Panel** — Get AI assistance and additional repository context | ![AI Panel](docs/images/Ai_panel.png) ![More AI Information](docs/images/Moreinfo_aipanel.png) |
-| **Bug Investigation** — Investigate reported bugs and explore relevant repository evidence | ![Bug Investigation](docs/images/Bug_Investigation_panel.png) ![Investigation Fix Result](docs/images/Investigate_fix_result.png) |
-| **File Manager and Code Editor** — Browse repository files and edit source code | ![File Manager](docs/images/file_manager.png) ![Code Editor](docs/images/editor.png) |
-| **Sandbox Editor** — Work with source code in the integrated Monaco editor | ![Sandbox Monaco Editor](docs/images/sandbox_monaco_editor.png) |
-| **AI-Assisted Code Changes** — Review highlighted changes and AI-assisted edits | ![Code Change Highlight](docs/images/code_change_highlight.png) ![In-Code Auto Edit](docs/images/incode_auto_edit.png) |
-| **Branch Management** — Create branches for isolated development and code changes | ![Branch Create](docs/images/branch_create.png) ![Branch Creation](docs/images/branch_creation.png) |
-| **Automated Testing** — Run verification and inspect automated testing results | ![Automated Testing](docs/images/auto_testing.png) |
-
+| **Connect Repository** — Connect a repository to the engineering workspace. | <a href="docs/images/connect_page.png"><img src="docs/images/connect_page.png" width="220"></a> |
+| **Direct Repository Access** — Access the connected repository directly. | <a href="docs/images/direct_repo_access.png"><img src="docs/images/direct_repo_access.png" width="220"></a> |
+| **Dependency Graph** — Visualize repository files, nodes, and relationships. | <a href="docs/images/graph_view.png"><img src="docs/images/graph_view.png" width="220"></a> |
+| **Structured Graph Visualization** — Explore nodes, edges, imports, and connections. | <a href="docs/images/Nodes_edges_view.png"><img src="docs/images/Nodes_edges_view.png" width="220"></a> <a href="docs/images/strcured_graph_view.png"><img src="docs/images/strcured_graph_view.png" width="220"></a> |
+| **Impact Analysis** — Identify dependencies and understand the potential impact of code changes. | <a href="docs/images/impact_analyze.png"><img src="docs/images/impact_analyze.png" width="220"></a> <a href="docs/images/Impact_connection.png"><img src="docs/images/Impact_connection.png" width="220"></a> |
+| **Node Exploration and Actions** — Select nodes, inspect details, and access contextual actions. | <a href="docs/images/Node_panel.png"><img src="docs/images/Node_panel.png" width="220"></a> <a href="docs/images/node_click.png"><img src="docs/images/node_click.png" width="220"></a> |
+| **AI Assistant Panel** — Get AI assistance and additional repository context. | <a href="docs/images/Ai_panel.png"><img src="docs/images/Ai_panel.png" width="220"></a> <a href="docs/images/Moreinfo_aipanel.png"><img src="docs/images/Moreinfo_aipanel.png" width="220"></a> |
+| **Bug Investigation** — Investigate reported bugs and explore relevant repository evidence. | <a href="docs/images/Bug_Investigation_panel.png"><img src="docs/images/Bug_Investigation_panel.png" width="220"></a> <a href="docs/images/Investigate_fix_result.png"><img src="docs/images/Investigate_fix_result.png" width="220"></a> |
+| **File Manager and Code Editor** — Browse repository files and edit source code. | <a href="docs/images/file_manager.png"><img src="docs/images/file_manager.png" width="220"></a> <a href="docs/images/editor.png"><img src="docs/images/editor.png" width="220"></a> |
+| **Sandbox Editor** — Edit source code in the integrated Monaco editor. | <a href="docs/images/sandbox_monaco_editor.png"><img src="docs/images/sandbox_monaco_editor.png" width="220"></a> |
+| **AI-Assisted Code Changes** — Review highlighted changes and AI-assisted edits. | <a href="docs/images/code_change_highlight.png"><img src="docs/images/code_change_highlight.png" width="220"></a> <a href="docs/images/incode_auto_edit.png"><img src="docs/images/incode_auto_edit.png" width="220"></a> |
+| **Branch Management** — Create branches for isolated development and code changes. | <a href="docs/images/branch_create.png"><img src="docs/images/branch_create.png" width="220"></a> <a href="docs/images/branch_creation.png"><img src="docs/images/branch_creation.png" width="220"></a> |
+| **Automated Testing** — Run verification and inspect automated testing results. | <a href="docs/images/auto_testing.png"><img src="docs/images/auto_testing.png" width="220"></a> |
 ---
 
 ## 2. What it does
