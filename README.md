@@ -39,17 +39,27 @@ AI Software Engineer (Engineer Mode) does not paste a whole repository into an L
 
 ---
 
-## 1. Screenshots
+## Product Screenshots
 
+<<<<<<< HEAD
 | View | Screenshot |
+=======
+| Feature | Screenshot |
+>>>>>>> 2b66798 (readme_updated)
 |---|---|
-| **Dependency graph**: every file, class, and function as a node, with call and import edges | `![Graph](docs/images/graph.png)` |
-| **Impact analysis**: select a node and see everything a change would affect | `![Impact](docs/images/impact.png)` |
-| **Node actions**: Open file, Check connections, Explain this node, Connect to AI agent | `![Node menu](docs/images/node-menu.png)` |
-| **Graph Copilot**: ask questions grounded in the real code and graph | `![Copilot](docs/images/copilot.png)` |
-| **Investigate**: describe a bug, get ranked suspects, a root cause, and a candidate patch | `![Investigate](docs/images/investigate.png)` |
-| **Files and Sandbox**: browse repository files, edit, and run tests on your change | `![Sandbox](docs/images/sandbox.png)` |
-| **Verification report**: baseline vs patched test results | `![Verification](docs/images/verification.png)` |
+| **Connect Repository** — Connect a repository to the engineering workspace | ![Connect Repository](docs/images/connect_page.png) |
+| **Direct Repository Access** — Access the connected repository | ![Direct Repository Access](docs/images/direct_repo_access.png) |
+| **Dependency Graph** — Visualize repository files, nodes, and relationships | ![Graph View](docs/images/graph_view.png) |
+| **Structured Graph Visualization** — Explore nodes, edges, imports, and connections | ![Nodes and Edges](docs/images/Nodes_edges_view.png) ![Structured Graph](docs/images/strcured_graph_view.png) |
+| **Impact Analysis** — Identify dependencies and understand the potential impact of code changes | ![Impact Analysis](docs/images/impact_analyze.png) ![Impact Connections](docs/images/Impact_connection.png) |
+| **Node Exploration and Actions** — Select nodes, inspect details, and access contextual actions | ![Node Panel](docs/images/Node_panel.png) ![Node Click](docs/images/node_click.png) |
+| **AI Assistant Panel** — Get AI assistance and additional repository context | ![AI Panel](docs/images/Ai_panel.png) ![More AI Information](docs/images/Moreinfo_aipanel.png) |
+| **Bug Investigation** — Investigate reported bugs and explore relevant repository evidence | ![Bug Investigation](docs/images/Bug_Investigation_panel.png) ![Investigation Fix Result](docs/images/Investigate_fix_result.png) |
+| **File Manager and Code Editor** — Browse repository files and edit source code | ![File Manager](docs/images/file_manager.png) ![Code Editor](docs/images/editor.png) |
+| **Sandbox Editor** — Work with source code in the integrated Monaco editor | ![Sandbox Monaco Editor](docs/images/sandbox_monaco_editor.png) |
+| **AI-Assisted Code Changes** — Review highlighted changes and AI-assisted edits | ![Code Change Highlight](docs/images/code_change_highlight.png) ![In-Code Auto Edit](docs/images/incode_auto_edit.png) |
+| **Branch Management** — Create branches for isolated development and code changes | ![Branch Create](docs/images/branch_create.png) ![Branch Creation](docs/images/branch_creation.png) |
+| **Automated Testing** — Run verification and inspect automated testing results | ![Automated Testing](docs/images/auto_testing.png) |
 
 ---
 
