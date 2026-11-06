@@ -41,8 +41,6 @@ AI Software Engineer (Engineer Mode) does not paste a whole repository into an L
 
 ## 1. Screenshots
 
-> Replace each placeholder with a real screenshot saved under `docs/images/`.
-
 | View | Screenshot |
 |---|---|
 | **Dependency graph**: every file, class, and function as a node, with call and import edges | `![Graph](docs/images/graph.png)` |
