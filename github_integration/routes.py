@@ -231,11 +231,11 @@ def get_installations(user: AuthenticatedUser = Depends(get_current_user)):
     try:
         return {"installations": store.list_installations(user.id)}
     except Exception as exc:
+        logger.exception("installations: list_installations failed")
         raise HTTPException(
             status_code=503,
             detail="Could not load GitHub installations.",
         ) from exc
-
 
 @router.get("/installations/{installation_id}/repositories")
 def get_installation_repositories(
