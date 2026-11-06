@@ -394,11 +394,76 @@ def _run(cmd: list[str], cwd: Path, timeout: int) -> CommandResult:
 #     r.outcomes = _parse_junit(xml_path)
 #     return r
 
+def _install_project_dependencies(cwd: Path, timeout: int) -> CommandResult | None:
+    """Install dependencies for the disposable repository copy."""
+    requirements = next(
+        (
+            cwd / name
+            for name in (
+                "requirements-dev.txt",
+                "requirements-test.txt",
+                "test-requirements.txt",
+                "requirements.txt",
+            )
+            if (cwd / name).is_file()
+        ),
+        None,
+    )
+
+    manifest_exists = (
+        (cwd / "pyproject.toml").is_file()
+        or (cwd / "setup.py").is_file()
+    )
+
+    commands = []
+
+    if requirements:
+        commands.append([
+            sys.executable, "-m", "pip", "install",
+            "--disable-pip-version-check",
+            "-r", str(requirements),
+        ])
+
+    installs_local_project = False
+
+    if requirements:
+        for line in requirements.read_text(
+            encoding="utf-8-sig", errors="replace"
+        ).splitlines():
+            line = line.strip()
+            if (
+                line.startswith(("-e .", "--editable .", "--editable=.", "./"))
+                or line == "."
+            ):
+                installs_local_project = True
+                break
+
+    if manifest_exists and not installs_local_project:
+        commands.append([
+            sys.executable, "-m", "pip", "install",
+            "--disable-pip-version-check",
+            ".",
+        ])
+
+    for command in commands:
+        result = _run(command, cwd, min(timeout, 300))
+
+        if result.exit_code != 0:
+            result.output = (
+                "Project dependency installation failed:\n" + result.output
+            )
+            return result
+
+    return None
 
 def _run_tests(cmd: list[str], cwd: Path, timeout: int) -> CommandResult:
-    """Run pytest directly in the GitHub Actions runner."""
-    xml_path = cwd.parent / f"{cwd.name}-junit.xml"
+    """Install project dependencies and run pytest."""
+    dependency_error = _install_project_dependencies(cwd, timeout)
 
+    if dependency_error is not None:
+        return dependency_error
+
+    xml_path = cwd.parent / f"{cwd.name}-junit.xml"
     full = list(cmd)
 
     if any("pytest" in part for part in cmd):
