@@ -396,12 +396,28 @@ def _run(cmd: list[str], cwd: Path, timeout: int) -> CommandResult:
 
 
 def _run_tests(cmd: list[str], cwd: Path, timeout: int) -> CommandResult:
-    """Run pytest in a disposable Docker container; never execute repo tests on the host."""
+    """Run pytest directly in the GitHub Actions runner."""
     xml_path = cwd.parent / f"{cwd.name}-junit.xml"
 
-    from .docker_runner import run_pytest_in_docker
+    full = list(cmd)
 
-    return run_pytest_in_docker(cmd, cwd, timeout, xml_path)
+    if any("pytest" in part for part in cmd):
+        full += [
+            f"--junitxml={xml_path}",
+            "-p",
+            "no:cacheprovider",
+        ]
+
+    result = _run(full, cwd, timeout)
+
+    if any("pytest" in part for part in cmd):
+        (
+            result.outcomes,
+            result.junit_valid,
+            result.collection_errors,
+        ) = _read_junit(xml_path)
+
+    return result
 
 
 

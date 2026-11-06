@@ -36,6 +36,7 @@ def _authenticate(token: str | None):
         raise HTTPException(status_code=401, detail="Invalid runner credentials")
 
 
+
 def create_verification_job(
     user_id: str,
     repository_id: str,
@@ -55,9 +56,28 @@ def create_verification_job(
             )
             job_id = str(cur.fetchone()["id"])
 
-    dispatch_runner_workflow(job_id)
+    try:
+        dispatch_runner_workflow(job_id)
+    except Exception as exc:
+        with _connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE public.verification_jobs
+                    SET status = 'failed',
+                        error = %s,
+                        updated_at = NOW()
+                    WHERE id = %s AND status = 'queued'
+                    """,
+                    (str(exc)[:2000], job_id),
+                )
+        raise HTTPException(
+            status_code=502,
+            detail=f"Could not start verification: {exc}",
+        ) from exc
 
     return job_id
+
 
 def get_verification_job(job_id: str, user_id: str) -> dict | None:
     with _connect() as conn:
