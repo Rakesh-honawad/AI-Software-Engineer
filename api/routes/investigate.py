@@ -892,6 +892,11 @@ async def investigate(
             "Expected behaviour: "
             f'{reproduction.get("expectation", "")}'
         )
+    elif has_related_failure:
+        grounded = (
+            "Existing tests that exercise the reported code fail "
+            "with these assertions:\n" + related_text[:1500]
+        )
 
     try:
         for number in range(1, MAX_ATTEMPTS + 1):
