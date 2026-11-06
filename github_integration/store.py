@@ -14,7 +14,9 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+import logging
 
+logger = logging.getLogger(__name__)
 from github_integration.security import (
     encrypt_installation_id,
     decrypt_installation_id,
@@ -253,8 +255,16 @@ def save_pending_installation(
         )
 
 
+def _to_utc(value) -> datetime:
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
 def get_pending_installation(user_id: str, state: str) -> int | None:
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc)
 
     with _connection() as conn:
         row = conn.execute(
@@ -266,7 +276,7 @@ def get_pending_installation(user_id: str, state: str) -> int | None:
             (hash_oauth_state(state), user_id),
         ).fetchone()
 
-    if row is None or row["expires_at"] <= now:
+    if row is None or _to_utc(row["expires_at"]) <= now:
         return None
 
     stored_id = str(row["installation_id"])
@@ -291,7 +301,6 @@ def get_pending_installation(user_id: str, state: str) -> int | None:
             )
 
         return installation_id
-
 
 def delete_pending_installation(user_id: str, state: str) -> None:
     with _connection() as conn:
@@ -442,8 +451,17 @@ def list_installations(user_id: str) -> list[dict]:
             if isinstance(encrypted_value, bytes):
                 encrypted_value = encrypted_value.decode("utf-8")
 
+            try:
+                installation_id = decrypt_installation_id(encrypted_value)
+            except Exception:
+                logger.warning(
+                    "list_installations: skipping %s, could not decrypt",
+                    row["account_login"],
+                )
+                continue
+
             installations.append({
-                "installation_id": decrypt_installation_id(encrypted_value),
+                "installation_id": installation_id,
                 "account_login": row["account_login"],
                 "account_type": row["account_type"],
                 "created_at": row["created_at"],
