@@ -4,21 +4,20 @@ ai/narration/node_explain_narration.py
 Fixes a real, confirmed bug: the frontend's "Explain X" chat command
 was silently routing into impact_narration.py's prompt (via a regex
 matching the word "explain"), which is DELIBERATELY a one-sentence,
-safe-to-change-or-not verdict — never designed to actually explain
-what code does. That's why "Explain X" answers always sounded like a
-hardcoded "no impact, safe to remove" response: the model was
-correctly following an instruction that was never meant for this
-question.
+safe-to-change-or-not verdict, never designed to actually explain
+what code does.
 
-This module is a distinct, general-purpose "explain this node" prompt
-— what does this code do, what's its role, what should someone know
-before touching it — built on the exact pattern already proven in
-dead_code_narration.py (real source + a few structured questions,
-not a vague "explain this"), just generalized to any node (function,
-class, file) instead of only dead-code candidates.
+This module is a distinct, general-purpose "explain this node" prompt:
+what does this code do, what is its role, what should someone know
+before touching it. Built on the pattern already proven in
+dead_code_narration.py (real source plus structured questions).
 
 Same injection pattern as impact_narration.py / dead_code_narration.py:
 takes llm_call as a parameter, never imports ai/router/ directly.
+
+v2: answer length now scales with how important the node is. Small,
+little-used nodes get a 3-sentence answer; nodes with many dependents
+or long source get a short structured answer.
 """
 
 from __future__ import annotations
@@ -27,9 +26,16 @@ from typing import Awaitable, Callable
 
 NarrationCall = Callable[[str], Awaitable[str]]
 
-# Same reasoning as dead_code_narration.py's MAX_SOURCE_CHARS — bounds
-# prompt size even for a large file/class.
+# Bounds prompt size even for a large file/class.
 MAX_SOURCE_CHARS = 6000
+
+# A node counts as "important" when enough other code depends on it, or when
+# it is long enough that a one-line summary would hide real logic.
+IMPORTANT_FAN_IN = 5
+LONG_SOURCE_CHARS = 1500
+
+# Three backticks, built here so they never sit literally inside a string.
+FENCE = "`" * 3
 
 
 def build_explain_node_prompt(
@@ -40,44 +46,74 @@ def build_explain_node_prompt(
     fan_in: int | None = None,
 ) -> str:
     """
-    Pure string construction — no model call, no side effects, testable
-    without AI, same discipline as every other prompt-builder in this
-    codebase.
+    Pure string construction: no model call, no side effects.
 
-    fan_in (how many other things depend on this, if already known
-    from a prior impact-analysis call) is optional context, not the
-    point of this prompt — this is about explaining the CODE, not
-    re-answering "what's the impact", which is impact_narration.py's
-    job and stays separate.
+    Short nodes that little else depends on get a brief answer.
+    Nodes with many dependents, or long source, get the fuller structure.
     """
     truncated = source_text[:MAX_SOURCE_CHARS]
     truncation_note = (
         f"\n[...truncated at {MAX_SOURCE_CHARS} characters...]"
-        if len(source_text) > MAX_SOURCE_CHARS else ""
+        if len(source_text) > MAX_SOURCE_CHARS
+        else ""
     )
 
-    dependency_note = (
-        f"\n(For reference: {fan_in} other place{'s' if fan_in != 1 else ''} in the "
-        f"codebase currently depend{'s' if fan_in == 1 else ''} on this — but that's "
-        f"not what you're being asked about here; explain the CODE itself.)"
-        if fan_in is not None else ""
+    important = (fan_in or 0) >= IMPORTANT_FAN_IN or len(source_text) > LONG_SOURCE_CHARS
+
+    header = (
+        f"A developer is looking at `{node_name}` ({node_type}) in `{file_path}` "
+        "and wants to understand what it does."
     )
 
-    return f"""A developer is looking at `{node_name}` ({node_type}) in `{file_path}` and wants to understand what it actually does before working with it.{dependency_note}
+    code_block = (
+        "SOURCE CODE:\n"
+        + FENCE
+        + "\n"
+        + truncated
+        + truncation_note
+        + "\n"
+        + FENCE
+    )
 
-SOURCE CODE:
-```
-{truncated}{truncation_note}
-```
+    if not important:
+        return (
+            header
+            + "\n\n"
+            + code_block
+            + "\n\n"
+            + "Explain it briefly: at most 3 short sentences, in plain terms, "
+            "covering what it does and the key detail of how. No headings, "
+            "no bullet points. Do not discuss impact, risk, callers, or what "
+            "depends on it. Reference actual names from the code, and do not "
+            "give a generic description."
+        )
 
-Answer in this structure:
-1. PURPOSE: 1-2 sentences — what does this code do, in plain terms?
-2. HOW IT WORKS: 2-4 sentences walking through the actual logic — not a restatement of the purpose, the real mechanics (branches, side effects, what it calls or reads/writes, error handling if any).
-3. THINGS TO KNOW BEFORE CHANGING IT: any non-obvious behavior, assumptions the code makes, edge cases it handles (or doesn't), or patterns (decorators, dependency injection, dynamic dispatch) that aren't visible from the code's structure alone.
+    dependency_line = ""
+    if fan_in is not None and fan_in >= IMPORTANT_FAN_IN:
+        dependency_line = (
+            f"\nNote: {fan_in} other places depend on this. Mention that in "
+            "one short sentence at the end, only if it helps the reader."
+        )
 
-Be specific to THIS code — reference actual variable/function names, actual branches, actual logic. Do not give a generic description that could apply to any function of this shape."""
+    return (
+        header
+        + dependency_line
+        + "\n\n"
+        + code_block
+        + "\n\n"
+        + "Answer in this structure, and keep the whole answer under about "
+        "150 words:\n"
+        "1. PURPOSE: one sentence on what it does.\n"
+        "2. HOW IT WORKS: 2-3 sentences on the real logic (branches, side "
+        "effects, what it calls or reads/writes).\n"
+        "3. WATCH OUT: include this only if there is a genuinely non-obvious "
+        "behavior or edge case, as one sentence. Otherwise leave this "
+        "section out entirely.\n\n"
+        "Reference actual names from the code. Do not give a generic "
+        "description."
+    )
 
 
 async def narrate_node_explanation(prompt: str, llm_call: NarrationCall) -> str:
-    """Entry point — same shape as narrate_impact()/narrate_dead_code_finding()."""
+    """Entry point: same shape as narrate_impact()/narrate_dead_code_finding()."""
     return await llm_call(prompt)
