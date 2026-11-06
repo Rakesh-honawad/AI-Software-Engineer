@@ -14,6 +14,7 @@ from api.routes import workspace_files
 from github_integration.routes import router as github_integration_router
 from github_integration.repository_routes import router as github_app_repository_router
 from api.routes import auth
+from api.routes import verification_runner
 
 app = FastAPI(
     title="AI Software Engineer API",
@@ -45,7 +46,7 @@ app.include_router(explain.router)
 app.include_router(repo_qa.router)
 app.include_router(workspace_files.router)
 app.include_router(auth.router)
-
+app.include_router(verification_runner.router)
 app.include_router(github_integration_router)
 app.include_router(github_app_repository_router)
 
