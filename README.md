@@ -938,9 +938,10 @@ AI-Software-Engineer/
 
 ---
 
-## 23. License
+## License
 
-Add the project's selected license before accepting external contributions.
+This project is licensed under the Apache License 2.0.
+See the [LICENSE](LICENSE) file for details.
 
 ---
 
