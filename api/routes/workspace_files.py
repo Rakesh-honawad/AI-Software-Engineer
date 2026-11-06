@@ -600,38 +600,66 @@ async def apply_edit(
             detail="No changes to apply.",
         )
 
-    # Apply always requires a fresh FULL verification.
-    # Never trust an earlier Quick Verify or Full Verify.
-    verification_result = await asyncio.to_thread(
-        verify_editor_patch,
-        str(root),
-        diff,
-        DEFAULT_TEST_CMD,
+    # Import locally to avoid a circular import.
+    from api.routes.verification_runner import (
+        create_verification_job,
+        wait_for_verification_job,
     )
 
+    # Apply always requires a fresh FULL remote verification.
+    job_id = await asyncio.to_thread(
+        create_verification_job,
+        str(user.id),
+        repository_id,
+        "verify_editor_patch",
+        {
+            "diff": diff,
+            "test_cmd": DEFAULT_TEST_CMD,
+            "scope": "full",
+        },
+    )
+
+    verification_result = await wait_for_verification_job(
+        job_id,
+        str(user.id),
+        timeout=300,
+    )
+    if not isinstance(verification_result, dict):
+        raise HTTPException(
+            status_code=502,
+            detail="Invalid remote verification result. Apply blocked.",
+        )
+
     verification = {
-        "complete": verification_result.complete,
-        "safe_to_apply": verification_result.safe_to_apply,
-        "tests_pass_after": verification_result.tests_pass_after,
-        "verdict": verification_result.verdict,
-        "baseline": _command_summary(verification_result.baseline),
-        "patched": _command_summary(verification_result.patched),
-        "baseline_failures": verification_result.baseline_failures,
-        "still_failing": verification_result.still_failing,
-        "new_failures": verification_result.new_failures,
-        "errors": verification_result.errors,
+        "complete": verification_result.get("complete", False),
+        "safe_to_apply": verification_result.get("safe_to_apply", False),
+        "tests_pass_after": verification_result.get(
+            "tests_pass_after", False
+        ),
+        "verdict": verification_result.get(
+            "verdict", "verification_unavailable"
+        ),
+        "baseline": verification_result.get("baseline"),
+        "patched": verification_result.get("patched"),
+        "baseline_failures": verification_result.get(
+            "baseline_failures", []
+        ),
+        "still_failing": verification_result.get("still_failing", []),
+        "new_failures": verification_result.get("new_failures", []),
+        "errors": verification_result.get("errors", []),
     }
 
+    # Fail closed: only a complete, safe verification can authorize Apply.
     if (
-        not verification_result.complete
-        or not verification_result.safe_to_apply
+        not verification["complete"]
+        or not verification["safe_to_apply"]
     ):
         raise HTTPException(
             status_code=409,
             detail={
                 "message": (
-                    "Apply blocked: full verification was incomplete "
-                    "or found regressions."
+                    "Apply blocked: full remote verification was "
+                    "incomplete or found regressions."
                 ),
                 "verification": verification,
             },
@@ -695,7 +723,7 @@ async def apply_edit(
         "verification": verification,
         "restore_token": restore_token,
         "note": (
-            "Full verification completed with no new regressions. "
+            "Full remote verification completed with no new regressions. "
             "Re-index the repository so the graph reflects the changes."
         ),
     }
