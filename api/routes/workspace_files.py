@@ -174,7 +174,7 @@ async def export_repository_zip(
             compression=zipfile.ZIP_DEFLATED,
         ) as archive:
             for file_path in root.rglob("*"):
-                if not file_path.is_file():
+                if file_path.is_symlink() or not file_path.is_file():
                     continue
 
                 relative = file_path.relative_to(root)

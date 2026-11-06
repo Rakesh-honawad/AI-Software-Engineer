@@ -8,8 +8,16 @@ from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 import json
 import urllib.request
+import tempfile
+import zipfile
+from pathlib import Path
 
+from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
+
+from api.routes.workspace_files import _repo_root, _ignore_export_path
 from github_integration.client import create_installation_token
+
 
 router = APIRouter(prefix="/api/v1/runner", tags=["verification-runner"])
 
@@ -39,16 +47,31 @@ def create_verification_job(
     with _connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                INSERT INTO public.verification_jobs
-                    (user_id, repository_id, operation, payload)
-                VALUES (%s, %s, %s, %s)
-                RETURNING id
-                """,
+                """INSERT INTO public.verification_jobs
+                   (user_id, repository_id, operation, payload)
+                   VALUES (%s, %s, %s, %s) RETURNING id""",
                 (user_id, repository_id, operation, Json(payload)),
             )
-            return str(cur.fetchone()["id"])
+            job_id = str(cur.fetchone()["id"])
 
+    dispatch_runner_workflow(job_id)
+
+    return job_id
+
+def get_verification_job(job_id: str, user_id: str) -> dict | None:
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, status, result, error
+                FROM public.verification_jobs
+                WHERE id = %s AND user_id = %s
+                """,
+                (str(job_id), str(user_id)),
+            )
+            job = cur.fetchone()
+
+    return dict(job) if job else None
 
 @router.post("/jobs/{job_id}/claim")
 def claim_job(
@@ -153,3 +176,80 @@ def dispatch_runner_workflow(job_id: str) -> None:
                 raise RuntimeError("GitHub workflow dispatch failed")
     except Exception as exc:
         raise RuntimeError(f"Could not start verification workflow: {exc}") from exc
+
+@router.get("/jobs/{job_id}/source.zip")
+def download_job_source(
+    job_id: UUID,
+    x_runner_token: str | None = Header(default=None),
+):
+    _authenticate(x_runner_token)
+
+    # Atomically move the claimed job to running.
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE public.verification_jobs
+                SET status = 'running',
+                    lease_expires_at = NOW() + INTERVAL '35 minutes',
+                    updated_at = NOW()
+                WHERE id = %s
+                  AND status = 'claimed'
+                  AND lease_expires_at > NOW()
+                RETURNING user_id, repository_id
+                """,
+                (str(job_id),),
+            )
+            job = cur.fetchone()
+
+    if not job:
+        raise HTTPException(
+            status_code=409,
+            detail="Job is not claimed or its lease has expired.",
+        )
+
+    # Resolve only the repository owned by this job's user.
+    root = _repo_root(
+        job["repository_id"],
+        str(job["user_id"]),
+    )
+
+    fd, archive_name = tempfile.mkstemp(
+        prefix="verification-source-",
+        suffix=".zip",
+    )
+    os.close(fd)
+    archive_path = Path(archive_name)
+
+    try:
+        with zipfile.ZipFile(
+            archive_path,
+            "w",
+            compression=zipfile.ZIP_DEFLATED,
+        ) as archive:
+            for file_path in root.rglob("*"):
+                if file_path.is_symlink() or not file_path.is_file():
+                    continue
+
+                relative = file_path.relative_to(root)
+
+                if _ignore_export_path(relative):
+                    continue
+
+                archive.write(
+                    file_path,
+                    arcname=relative.as_posix(),
+                )
+
+        return FileResponse(
+            path=archive_path,
+            media_type="application/zip",
+            filename="verification-source.zip",
+            background=BackgroundTask(
+                lambda: archive_path.unlink(missing_ok=True)
+            ),
+        )
+
+    except Exception:
+        archive_path.unlink(missing_ok=True)
+        raise        

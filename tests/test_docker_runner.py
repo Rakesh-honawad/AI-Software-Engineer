@@ -1,4 +1,4 @@
-import subprocess
+﻿import subprocess
 from pathlib import Path
 
 import sandbox.docker_runner as docker_runner
@@ -98,7 +98,7 @@ def test_successful_execution_uses_isolated_container(monkeypatch, tmp_path):
     monkeypatch.setattr(
         runner,
         "_read_junit",
-        lambda path: ({"test_example": "passed"}, True, []),
+        lambda path: ({"test_example": "passed"}, True, False),
     )
 
     workspace = tmp_path / "repo"
@@ -118,6 +118,8 @@ def test_successful_execution_uses_isolated_container(monkeypatch, tmp_path):
     assert result.exit_code == 0
     assert result.timed_out is False
     assert result.outcomes == {"test_example": "passed"}
+    assert result.junit_valid is True
+    assert result.collection_errors is False
 
     create_call = next(call for call in calls if call[0] == "create")
 

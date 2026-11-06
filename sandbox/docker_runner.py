@@ -372,6 +372,8 @@ def run_pytest_in_docker(
             timed_out=timed_out,
             failed_tests=_failed_ids(output),
             outcomes=outcomes,
+            junit_valid=junit_valid,
+            collection_errors=collection_errors,
         )
         return result
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
