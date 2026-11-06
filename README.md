@@ -940,9 +940,13 @@ AI-Software-Engineer/
 
 ## License
 
-This project is licensed under the Apache License 2.0.
-See the [LICENSE](LICENSE) file for details.
+**Proprietary Software — All Rights Reserved**
 
----
+Copyright © 2026 Rakesh Honawad.
+
+Unauthorized copying, modification, distribution, or commercial use
+of this project is prohibited.
+
+See [LICENSE](LICENSE) for details.
 
 **The intended result:** an engineering workspace that does not merely suggest code, but understands the repository, explains its reasoning, proposes focused changes, and checks them against real tests.
