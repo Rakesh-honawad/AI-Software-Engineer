@@ -278,6 +278,7 @@ def _parse_errors(state: dict[str, tuple[str, str]]) -> list[str]:
         if orig == cur or not rel.endswith(".py"):
             continue
         try:
+            ast.parse(cur.lstrip("\ufeff"), filename=rel)
             ast.parse(cur, filename=rel)
         except SyntaxError as e:
             errors.append(f"{rel}: the patched file does not parse ({e.msg}, line {e.lineno})")

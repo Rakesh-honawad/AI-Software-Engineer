@@ -206,7 +206,7 @@ def find_syntax_errors(
             try:
                 ast.parse(
                     path.read_text(
-                        encoding="utf-8",
+                        encoding="utf-8-sig"
                         errors="replace",
                     ),
                     filename=str(path),
