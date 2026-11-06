@@ -138,6 +138,11 @@ async def explain_node(
         node.file_path,
         node.line_range,
     )
+    if not source_text.strip():
+        raise HTTPException(
+            status_code=422,
+            detail="This node's source is empty, so there is nothing to explain.",
+        )
 
     fan_in = sum(
         1
