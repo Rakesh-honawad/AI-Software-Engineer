@@ -530,30 +530,54 @@ async def verify_edit(
 
         test_cmd = _test_cmd(request.test_path)
 
-    verification = await asyncio.to_thread(
-        verify_editor_patch,
-        str(root),
-        diff,
-        test_cmd,
+    # Import locally to avoid a circular import.
+    from api.routes.verification_runner import (
+        create_verification_job,
+        wait_for_verification_job,
     )
+
+    # Create and dispatch a remote verification job.
+    job_id = await asyncio.to_thread(
+        create_verification_job,
+        str(user.id),
+        repository_id,
+        "verify_editor_patch",
+        {
+            "diff": diff,
+            "test_cmd": test_cmd,
+            "scope": "quick" if request.test_path else "full",
+        },
+    )
+
+    # Wait for GitHub Actions to finish verification.
+    verification = await wait_for_verification_job(
+        job_id,
+        str(user.id),
+        timeout=300,
+    )
+
+    if not isinstance(verification, dict):
+        raise HTTPException(
+            status_code=502,
+            detail="Invalid verification result from remote runner.",
+        )
 
     return {
         "diff": diff,
-        "patch_applied": verification.patch_applied,
-        "apply_log": verification.apply_log,
+        "patch_applied": verification.get("patch_applied", False),
+        "apply_log": verification.get("apply_log", ""),
         "scope": "quick" if request.test_path else "full",
-        "complete": verification.complete,
-        "safe_to_apply": verification.safe_to_apply,
-        "verdict": verification.verdict,
-        "tests_pass_after": verification.tests_pass_after,
-        "baseline": _command_summary(verification.baseline),
-        "patched": _command_summary(verification.patched),
-        "baseline_failures": verification.baseline_failures,
-        "still_failing": verification.still_failing,
-        "new_failures": verification.new_failures,
-        "errors": verification.errors,
+        "complete": verification.get("complete", False),
+        "safe_to_apply": verification.get("safe_to_apply", False),
+        "verdict": verification.get("verdict", "verification_unavailable"),
+        "tests_pass_after": verification.get("tests_pass_after", False),
+        "baseline": verification.get("baseline"),
+        "patched": verification.get("patched"),
+        "baseline_failures": verification.get("baseline_failures", []),
+        "still_failing": verification.get("still_failing", []),
+        "new_failures": verification.get("new_failures", []),
+        "errors": verification.get("errors", []),
     }
-
 
 @router.post("/{repository_id}/apply")
 async def apply_edit(
