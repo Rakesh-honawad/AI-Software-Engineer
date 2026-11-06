@@ -2,7 +2,8 @@
 
 import secrets
 from datetime import datetime, timedelta, timezone
-
+import logging
+logger = logging.getLogger(__name__)
 from fastapi.responses import RedirectResponse
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -163,9 +164,11 @@ def confirm_installation(
     request: ConfirmInstallationRequest,
     user: AuthenticatedUser = Depends(get_current_user),
 ):
+    # Step 1: read the pending installation
     try:
         installation_id = store.get_pending_installation(user.id, request.state)
     except Exception as exc:
+        logger.exception("confirm: get_pending_installation failed")
         raise HTTPException(
             status_code=503,
             detail="Could not read the pending GitHub installation.",
@@ -177,8 +180,10 @@ def confirm_installation(
             detail="No valid pending installation was found for this user.",
         )
 
+    # Step 2: verify with GitHub
     installation = _verified_installation(installation_id)
 
+    # Step 3: save the installation
     try:
         save_kwargs = {
             "user_id": user.id,
@@ -186,23 +191,32 @@ def confirm_installation(
             "account_login": installation["account_login"],
             "account_type": installation["account_type"],
         }
-
         if installation.get("account_id") is not None:
             save_kwargs["account_id"] = installation["account_id"]
 
         store.save_installation(**save_kwargs)
+    except Exception as exc:
+        logger.exception("confirm: save_installation failed")
+        raise HTTPException(
+            status_code=503,
+            detail="Could not confirm the GitHub installation.",
+        ) from exc
+
+    # Step 4: cleanup and audit. A failure here must not undo the connection.
+    try:
         store.delete_pending_installation(user.id, request.state)
+    except Exception:
+        logger.exception("confirm: delete_pending_installation failed")
+
+    try:
         store.audit_event(
             user.id,
             "installation_confirmed",
             installation_id=installation_id,
             details=f"account={installation['account_login']}",
         )
-    except Exception as exc:
-        raise HTTPException(
-            status_code=503,
-            detail="Could not confirm the GitHub installation.",
-        ) from exc
+    except Exception:
+        logger.exception("confirm: audit_event failed")
 
     return {
         "connected": True,
@@ -293,3 +307,54 @@ def disconnect_installation(
             status_code=503,
             detail="Could not disconnect the GitHub installation.",
         ) from exc
+
+@router.get("/debug")
+def github_debug(installation_id: int = 0):
+    import os
+
+    out = {}
+    for name in [
+        "GITHUB_APP_ID", "GITHUB_APP_SLUG", "GITHUB_CLIENT_ID",
+        "GITHUB_CLIENT_SECRET", "GITHUB_STATE_SECRET",
+        "GITHUB_ENCRYPTION_KEY", "GITHUB_FRONTEND_URL", "DATABASE_URL",
+    ]:
+        out[f"env_{name}_set"] = bool(os.getenv(name, "").strip())
+
+    path = os.getenv("GITHUB_PRIVATE_KEY_PATH", "").strip()
+    if path.startswith("-----"):
+        out["key_source"] = "key text in env var"
+    else:
+        out["key_path"] = path
+        out["key_file_exists"] = os.path.exists(path)
+        if os.path.exists(path):
+            with open(path) as f:
+                text = f.read()
+            out["key_first_line"] = text.splitlines()[0][:40] if text else ""
+            out["key_line_count"] = len(text.splitlines())
+
+    try:
+        config = load_config()
+        out["config_loaded"] = True
+        out["app_id"] = str(config.app_id)
+    except Exception as exc:
+        out["config_loaded"] = False
+        out["config_error"] = f"{type(exc).__name__}: {str(exc)[:200]}"
+        return out
+
+    try:
+        with store._connection() as conn:
+            conn.execute("SELECT 1").fetchone()
+        out["database_ok"] = True
+    except Exception as exc:
+        out["database_ok"] = False
+        out["database_error"] = f"{type(exc).__name__}: {str(exc)[:200]}"
+
+    if installation_id:
+        try:
+            inst = github_get_installation(installation_id)
+            out["github_ok"] = True
+            out["github_account"] = inst.get("account_login")
+        except Exception as exc:
+            out["github_ok"] = False
+            out["github_error"] = f"{type(exc).__name__}: {str(exc)[:300]}"
+    return out

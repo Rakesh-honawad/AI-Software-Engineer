@@ -246,7 +246,6 @@ def test_github_app_index_uses_repository_scoped_token_and_starts_indexing(
     assert kwargs["github_default_branch"] == "main"
     assert kwargs["github_installation_record_id"] == 9876
 
-
 def test_github_app_index_rejects_invalid_repository_ids(client):
     response = client.post(
         "/repositories/index/github-app",
