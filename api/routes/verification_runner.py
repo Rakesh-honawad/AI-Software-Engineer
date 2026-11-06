@@ -11,7 +11,8 @@ import urllib.request
 import tempfile
 import zipfile
 from pathlib import Path
-
+import asyncio
+import time
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
@@ -72,6 +73,42 @@ def get_verification_job(job_id: str, user_id: str) -> dict | None:
             job = cur.fetchone()
 
     return dict(job) if job else None
+
+async def wait_for_verification_job(
+    job_id: str,
+    user_id: str,
+    timeout: int = 300,
+) -> dict:
+    deadline = time.monotonic() + timeout
+
+    while time.monotonic() < deadline:
+        job = await asyncio.to_thread(
+            get_verification_job,
+            job_id,
+            user_id,
+        )
+
+        if not job:
+            raise HTTPException(
+                status_code=404,
+                detail="Verification job not found",
+            )
+
+        if job["status"] == "completed":
+            return job.get("result") or {}
+
+        if job["status"] in {"failed", "expired"}:
+            raise HTTPException(
+                status_code=502,
+                detail=job.get("error") or "Remote verification failed",
+            )
+
+        await asyncio.sleep(2)
+
+    raise HTTPException(
+        status_code=504,
+        detail="Remote verification timed out. Apply is blocked.",
+    )
 
 @router.post("/jobs/{job_id}/claim")
 def claim_job(
