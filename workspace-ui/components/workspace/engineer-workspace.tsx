@@ -257,17 +257,29 @@ export function EngineerWorkspace({ repositoryId = null }: { repositoryId?: stri
     setMenu({ node, screen })
   }, [])
 
+  const resolveRepoFilePath = (raw: string) => {
+    const norm = (p: string) => p.replace(/\\/g, "/").replace(/^\.?\//, "")
+    const target = norm(raw)
+    if (repositoryFiles.includes(target)) return target
+    const hits = repositoryFiles
+      .filter((f) => target.endsWith("/" + f) || f.endsWith("/" + target))
+      .sort((a, b) => b.length - a.length) // prefer the most specific match
+    return hits[0] ?? target
+  }
+
   const runAction = useCallback(
     (action: NodeAction) => {
       const node = menu?.node ?? selectedNode
       if (!node) return
       switch (action) {
         case "open":
-          // vscode://file deep link: only resolves if this path exists on the viewing machine.
           if (node.file_path) {
-            window.location.href = `vscode://file/${node.file_path}`
+            if (repositoryId) {
+              void handleSelectRepositoryFile(resolveRepoFilePath(node.file_path))
+            }
+            setSandboxOpenRequest((n) => n + 1)
+            setPanel("sandbox")
           }
-          setInspectorOpen(true)
           canvasRef.current?.focusNode(node.id)
           break
         case "connections":
@@ -283,7 +295,7 @@ export function EngineerWorkspace({ repositoryId = null }: { repositoryId?: stri
           break
       }
     },
-    [menu, selectedNode],
+    [menu, selectedNode, repositoryId, repositoryFiles, activeBranch, handleSelectRepositoryFile],
   )
 
   async function handleCreateGithubBranch(name: string) {
